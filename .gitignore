@@ -1,0 +1,5 @@
+*.gz
+.ipynb_checkpoints/
+.ipynb_checkpoints/*
+.Rhistory
+.RData
