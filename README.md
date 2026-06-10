@@ -11,6 +11,7 @@ Julia version: 1.12
 Using [Pluto](https://plutojl.org/) notebook and the following packages:
 
 - [DataFrames.jl](https://dataframes.juliadata.org/stable/): In-memory tabular data in Julia.
+- [DuckDB.jl](https://duckdb.org/): DuckDB is an analytical in-process SQL database management system.
 - [CSV.jl](https://csv.juliadata.org/): Utility library for working with CSV and other delimited files.
 - [DataFramesMeta.jl](https://juliadata.org/DataFramesMeta.jl/stable/): Metaprogramming tools for DataFrames.
 - [Makie.jl](https://docs.makie.org/stable): Interactive data visualizations and plotting in Julia.
