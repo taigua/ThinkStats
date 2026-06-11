@@ -1,58 +1,28 @@
 ### A Pluto.jl notebook ###
-# v0.20.27
+# v1.0.1
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ c75d54c3-bd41-4a9c-9c6f-4a40ec403b62
 begin
-	using DataFrames
+	using DataFrames, DuckDB
 	using PrettyTables, FreqTables
+	using StatsBase
 	using CairoMakie
 end
 
-# ╔═╡ 8ea98460-545a-11f1-8779-0520d0391738
-md"""
-# Distributions
-
-This chapter introduces one of the most fundamental ideas in statistics, the distribution.
-We'll start with frequency tables -- which represent the values in a dataset and the number of times each of them appears -- and use them to explore data from the National Survey of Family Growth (NSFG).
-We'll also look for extreme or erroneous values, called outliers, and consider ways to handle them.
-"""
-
-# ╔═╡ 37a1cc94-6061-4e38-a63f-e9ae26aab040
-md"""
-## Frequency Tables
-
-One way to describe a variable is a **frequency table**, which contains the values of the variable and their **frequencies** -- that is, the number of times each value appears.
-This description is called the **distribution** of the variable.
-
-To represent distributions, we'll use a library called `FreqTables`.
-
-To show how it works, we'll start with a small list of values.
-"""
+# ╔═╡ b775c8a9-ced0-4270-8805-5d43a91e78ea
+include("utils.jl")
 
 # ╔═╡ 41ce4fd0-f7f0-43f7-8ae8-220ef71f7830
 t = [1.0, 2.0, 2.0, 3.0, 5.0]
-
-# ╔═╡ 0c116306-206f-4350-abdf-313ae6c39aaa
-md"""
-`FreqTables` provides a method called `freqtable` that takes a sequence and makes a `NamedVector`.
-"""
 
 # ╔═╡ 3f809858-3cc1-419e-9b40-98ff5e736be6
 begin
 	ftab = freqtable(t)
 	pretty_table(HTML, (value=names(ftab, 1), freqs=vec(ftab)))
 end
-
-# ╔═╡ b879011f-c211-4ad6-943e-d910b0e4384b
-md"""
-A `FreqTable` is a `NamedVector` that contains values and their frequencies.
-In this example, the value `1.0` has frequency 1, the value `2.0` has frequency 2, etc.
-
-We can use `Makie` to draw `bar` chart.
-"""
 
 # ╔═╡ 2eef38b4-0815-4605-a2e4-46042e93ac8d
 let
@@ -66,51 +36,319 @@ let
 	fig
 end
 
-# ╔═╡ 8252f786-8bbf-4478-a5bc-53a7aef5e31e
-md"""
-Because a `FreqTable` is a `Vector`, we can use the bracket operator to look up a value and get its frequency. 
-"""
-
 # ╔═╡ 4bea0764-8af6-4cb5-9968-222929a3a26b
 ftab[2.0]
-
-# ╔═╡ a265c359-974b-4f05-b11d-13492bda8759
-md"""
-We can use `names` to get an array of values.
-"""
 
 # ╔═╡ ba1d76bd-38ed-4fd4-8f20-d8e00ad25352
 names(ftab, 1)
 
-# ╔═╡ 2f52e8dd-c967-4058-9402-8106a98d4e94
-md"""
-We can use `vec` to get an array of frequencies.
-"""
-
 # ╔═╡ 88dcb2af-fd17-4496-a2a6-040ec88b883f
 vec(ftab)
 
-# ╔═╡ 4b297826-20c7-4626-b7cc-29f21da79912
+# ╔═╡ c173e809-1699-486b-9b4e-a739f69d8b03
+for name in names(ftab, 1)
+	println(name, " ", ftab[name])
+end
+
+# ╔═╡ 9b4d39e6-84b1-4b9d-82df-ff39a119c9af
+preg = read_parquet("../data/2002FemPregCleaned.parquet");
+
+# ╔═╡ b411aca7-9efb-487f-aeb8-802c29d7bb79
+live = subset(preg, :outcome => ByRow(==(1)));
+
+# ╔═╡ 9b1597dc-2a56-424b-be15-7a628c367dfb
+ftab_lb = freqtable(live.birthwgt_lb, skipmissing=true)
+
+# ╔═╡ e28705ec-a2f6-49cc-baa4-94ea9fd68da7
+let
+	fig = Figure(size=(600, 400))
+	ax = Axis(fig[1, 1], xlabel="Pounds", ylabel="Frequency")
+
+	barplot!(ax, names(ftab_lb, 1), vec(ftab_lb))
+	fig
+end
+
+# ╔═╡ 32a6dbfc-35f4-4157-a3b8-da6456768dc0
+names(ftab_lb, 1)[argmax(ftab_lb)]
+
+# ╔═╡ ac331353-73cb-4260-a238-89f379ed4619
+ftab_oz = freqtable(live.birthwgt_oz, skipmissing=true)
+
+# ╔═╡ 3b9ed099-adb0-49ea-9281-224739359f73
+let
+	fig = Figure(size=(600, 400))
+	ax = Axis(fig[1, 1], xlabel="Ounces", ylabel="Frequency")
+
+	barplot!(ax, names(ftab_oz, 1), vec(ftab_oz))
+	fig
+end
+
+# ╔═╡ 13c5c0e1-a77e-48e8-896f-9aa8eba7be95
+ftab_age = freqtable(live.agepreg, skipmissing=true)
+
+# ╔═╡ 297f8c3c-1e1b-4fe4-821f-a420056baaf6
+let
+	fig = Figure(size=(600, 400))
+	ax = Axis(fig[1, 1], xlabel="Age", ylabel="Frequency")
+
+	barplot!(ax, names(ftab_age, 1), vec(ftab_age))
+	fig
+end
+
+# ╔═╡ 87908434-d377-48f6-ad61-58dbe3026e64
+ftab_length = freqtable(live.prglngth, skipmissing=true)
+
+# ╔═╡ 5446b981-b1e0-4dae-bab8-0dca1f656e28
+let
+	fig = Figure(size=(600, 400))
+	ax = Axis(fig[1, 1], xlabel="Weeks", ylabel="Frequency")
+
+	barplot!(ax, names(ftab_length, 1), vec(ftab_length))
+	xlims!(ax, 20, 50)
+	fig
+end
+
+# ╔═╡ b5eec029-20d8-4683-810e-738fc1c5ae81
+function smallest(ftab, n=10)
+	ftab = first(ftab, 10)
+	pretty_table(HTML, (:value => names(ftab, 1), count=vec(ftab)))
+end
+
+# ╔═╡ d9d8bc3c-d1fb-48ba-b9e6-c997a4dd0dee
+smallest(ftab_length)
+
+# ╔═╡ 0f84bc0b-8019-404e-81b7-e680bc228446
+function largest(ftab, n=10)
+	ftab = last(ftab, 10)
+	pretty_table(HTML, (:value => names(ftab, 1), count=vec(ftab)))
+end
+
+# ╔═╡ 2edbfdf9-1945-49e9-aee8-b0343115f06e
+largest(ftab_length)
+
+# ╔═╡ 07bc2a40-2be9-48cb-b777-3a824739e789
+firsts = subset(live, :birthord => ByRow(==(1)));
+
+# ╔═╡ 6dac29f1-559f-4dd5-82bb-3922a1e06049
+others = subset(live, :birthord => ByRow(!=(1)));
+
+# ╔═╡ 0190a091-941e-4182-84b4-d7138fd324ed
+ftab_firsts = freqtable(firsts.prglngth, skipmissing=true);
+
+# ╔═╡ 47770f73-c091-416b-a0d8-5270d4d51de8
+ftab_others = freqtable(others.prglngth, skipmissing=true);
+
+# ╔═╡ 7b3e4825-1373-44ef-a961-8039644eff39
+let
+	fig = Figure(size=(600, 400))
+	ax = Axis(fig[1, 1])
+
+	barplot!(ax, names(ftab_firsts, 1), vec(ftab_firsts); 
+			 label="firsts", dodge=fill(1, length(ftab_firsts)))
+	barplot!(ax, names(ftab_others, 1), vec(ftab_others); 
+			 label="others", dodge=fill(2, length(ftab_others)))	
+	axislegend(ax)
+	xlims!(ax, 20, 50)
+	
+	fig
+end
+
+# ╔═╡ e4896132-6415-4815-bbc4-f7810d3f8462
+length(firsts.prglngth), length(others.prglngth)
+
+# ╔═╡ 4572ca48-1b5a-4e02-87c2-9d10597c0934
+begin
+	first_mean = mean(firsts.prglngth)
+	other_mean = mean(others.prglngth)
+	first_mean, other_mean
+end
+
+# ╔═╡ df58a5d3-f997-4497-a319-384dbbcf69b8
+begin
+	diff = first_mean - other_mean
+	diff, diff * 7 * 24
+end
+
+# ╔═╡ c2e83dee-a29a-49d5-9c15-367dc87f42ba
+diff / mean(live.prglngth) * 100
+
+# ╔═╡ 25fcdb2f-1651-40ef-8cc3-0361a4ca2226
+diff / std(live.prglngth)
+
+# ╔═╡ d293b092-12ea-463a-94d7-f3ac7e67738f
+group1, group2 = firsts.prglngth, others.prglngth;
+
+# ╔═╡ f57a4f7f-3c7e-424a-9426-dab2296d0472
+v1, v2 = var(group1), var(group2)
+
+# ╔═╡ 3f551764-6c67-4195-b887-f6600704ab5a
+begin
+	n1, n2 = length(group1), length(group2)
+	pooled_var = (n1 * v1 + n2 * v2) / (n1 + n2)
+end
+
+# ╔═╡ 75a7e1ee-b25f-404d-83da-1c321e4bcaa8
+sqrt(pooled_var)
+
+# ╔═╡ 19ceed58-2da8-466d-9d3f-bda02bde09dc
+std(firsts.prglngth), std(others.prglngth)
+
+# ╔═╡ 0ce697ca-7f55-41ed-8249-ff75f6803ac4
+function cohen_effect_size(group1, group2)
+    diff = mean(group1) - mean(group2)
+    v1, v2 = var(group1), var(group2)
+    n1, n2 = length(group1), length(group2)
+    pooled_var = (n1 * v1 + n2 * v2) / (n1 + n2)
+    diff / sqrt(pooled_var)
+end
+
+# ╔═╡ 14eed81a-bf9d-4f41-9540-be6fbeaa37c2
+cohen_effect_size(firsts.prglngth, others.prglngth)
+
+# ╔═╡ b05537f1-4593-44dd-99a5-9e2aabd41564
 md"""
-We'll see more `FreqTable` methods as we go along.
+## Exercises
+
+For the exercises in this chapter, we'll load the NSFG female respondent file, which contains one row for each female respondent.
+Instructions for downloading the data and the codebook are in the notebook for this chapter.
 """
 
-# ╔═╡ c173e809-1699-486b-9b4e-a739f69d8b03
+# ╔═╡ b017f0a4-7ab1-46c0-93ab-de9750b36aef
+resp = read_parquet("../data/2002FemResp.parquet");
 
+# ╔═╡ 04db1105-31f3-4b61-af48-171aef331cd7
+size(resp)
+
+# ╔═╡ 624197f6-3912-4a53-b13e-40b419fe0217
+md"""
+This `DataFrame` contains 3092 columns, but we'll use just a few of them.
+"""
+
+# ╔═╡ 2caaf452-6723-424c-9ac6-de7c95d9737f
+md"""
+### Exercise 2.1
+
+We'll start with `totincr`, which records the total income for the respondent's family, encoded with a value from 1 to 14.
+You can read the codebook for the respondent file to see what income level each value represents.
+
+Make a `FreqTab` object to represent the distribution of this variable and plot it as a bar chart.
+"""
+
+# ╔═╡ d3b2d1fa-e16d-4fc6-b5de-ebc69946abdd
+let
+	ftab_income = freqtable(resp.totincr, skipmissing=true)
+
+	fig = Figure(size=(600, 400))
+	ax = Axis(fig[1, 1], xlabel="Income (category)", ylabel="Frequency")
+
+	barplot!(ax, names(ftab_income, 1), vec(ftab_income))
+	fig	
+end
+
+# ╔═╡ ca9a13c1-7609-4330-9f4a-5f6637a4906b
+md"""
+### Exercise 2.2
+
+Make a frequency table of the `parity` column, which records the number of children each respondent has borne.
+How would you describe the shape of this distribution?
+"""
+
+# ╔═╡ ff198b68-de89-4bb1-98b2-fee8844a3680
+ftab_parity = freqtable(resp.parity, skipmissing=true);
+
+# ╔═╡ 714b0f52-15d4-4aea-a68e-e162edb43b20
+let
+    fig = Figure(size=(600, 400))
+    ax = Axis(fig[1, 1], xlabel="Parity", ylabel="Frequency")
+
+    barplot!(ax, names(ftab_parity, 1), vec(ftab_parity))
+    fig
+end
+
+# ╔═╡ 3f7d3639-c49d-4875-acb3-cae8a5e05e48
+md"""
+The distribution is skewed to the right.
+"""
+
+# ╔═╡ 6f87dc3d-1c6f-456b-947b-198ee98aaf22
+largest(ftab_parity)
+
+# ╔═╡ 4a2beec4-ada0-4aa7-873a-d4d6270b182e
+md"""
+### Exercise 2.3
+
+Let's investigate whether women with higher or lower income bear more children.
+Use the query method to select the respondents with the highest income (level 14).
+Plot the frequency table of `parity` for just the high income respondents.
+"""
+
+# ╔═╡ 93ca1e74-9d45-42e2-8122-5ffe97d95fbf
+rich = subset(resp, :totincr => ByRow(==(14)));
+
+# ╔═╡ 1957a92f-7754-4e32-9a9c-cbe7a53b1b8e
+let
+	ftab_parity = freqtable(rich.parity, skipmissing=true)
+
+	fig = Figure(size=(600, 400))
+	ax = Axis(fig[1, 1], xlabel="Parity", ylabel="Count")
+	barplot!(ax, names(ftab_parity, 1), vec(ftab_parity))
+	
+	fig
+end
+
+# ╔═╡ cc7e4f8c-d6ef-46cb-b3d2-73297987ed7e
+md"""
+Compare the mean `parity` for high income respondents and others.
+"""
+
+# ╔═╡ fdb03606-e9b9-4886-82cf-e7f7233f83ef
+not_rich = subset(resp, :totincr => ByRow(<(14)));
+
+# ╔═╡ 61876090-1bbc-4500-942b-04c3200e1012
+mean(rich.parity), mean(not_rich.parity)
+
+# ╔═╡ 75178594-c446-410c-a631-059c364e451b
+md"""
+Compute Cohen's effect size for this difference.
+How does it compare with the difference in pregnancy length for first babies and others?
+"""
+
+# ╔═╡ e5bd6eea-a8b7-45c4-942b-867b0f8e4033
+cohen_effect_size(rich.parity, not_rich.parity)
+
+# ╔═╡ 5016247a-b43a-4715-a729-f70b988e192a
+md"""
+Do these results show that people with higher income have fewer children, or can you think of another explanation for the apparent difference?
+"""
+
+# ╔═╡ 8ea03995-20a0-4fb7-a190-5c4fa76e840e
+# Solution
+
+# The NSFG includes respondents born in different years and
+# interviewed at different ages.
+# Income and parity depend on both of these factors.
+
+# To check whether people with higher income have more
+# children, we need to compare people from the same generation
+# interviewed at the same ages.
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DuckDB = "d2f5444f-75bc-4fdf-ac35-56f514c445e1"
 FreqTables = "da1fdf0e-e0ff-5433-a45f-9bb5ff651cb1"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 CairoMakie = "~0.15.10"
 DataFrames = "~1.8.2"
+DuckDB = "~1.5.2"
 FreqTables = "~1.0.0"
 PrettyTables = "~3.3.2"
+StatsBase = "~0.34.11"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -119,7 +357,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "f14ed8b9a8da8f2ffaeda4014deff80ae135d94c"
+project_hash = "2909b50547548a52ad170583be3f666ae4b094d2"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -202,6 +440,12 @@ version = "1.11.0"
 git-tree-sha1 = "bca794632b8a9bbe159d56bf9e31c422671b35e0"
 uuid = "18cc8868-cbac-4acf-b575-c8ff214dc66f"
 version = "1.3.2"
+
+[[deps.BitIntegers]]
+deps = ["Random"]
+git-tree-sha1 = "091d591a060e43df1dd35faab3ca284925c48e46"
+uuid = "c3b6d118-76ef-56ca-8cc7-ebb389d030a1"
+version = "0.3.7"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -383,6 +627,11 @@ git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
 
+[[deps.DBInterface]]
+git-tree-sha1 = "a444404b3f94deaa43ca2a58e18153a82695282b"
+uuid = "a10d1c49-ce27-4219-8d33-6db1a4562965"
+version = "2.6.1"
+
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
@@ -452,6 +701,18 @@ version = "0.9.5"
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.7.0"
+
+[[deps.DuckDB]]
+deps = ["DBInterface", "Dates", "DuckDB_jll", "FixedPointDecimals", "Tables", "UUIDs", "WeakRefStrings"]
+git-tree-sha1 = "656133510fa02a4f70a9d3ce6c1d083318406550"
+uuid = "d2f5444f-75bc-4fdf-ac35-56f514c445e1"
+version = "1.5.2"
+
+[[deps.DuckDB_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "a3f4fda40383140ac28b9b047bf8096c2d8ebc68"
+uuid = "2cbbab25-fc8b-58cf-88d4-687a02676033"
+version = "1.5.3+0"
 
 [[deps.EarCut_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -551,6 +812,12 @@ weakdeps = ["PDMats", "SparseArrays", "StaticArrays", "Statistics"]
     FillArraysSparseArraysExt = "SparseArrays"
     FillArraysStaticArraysExt = "StaticArrays"
     FillArraysStatisticsExt = "Statistics"
+
+[[deps.FixedPointDecimals]]
+deps = ["BitIntegers", "Parsers"]
+git-tree-sha1 = "41d3a5de0eab320cc04833a373f0fcb3640073d5"
+uuid = "fb4d412d-6eee-574d-9565-ede6634db7b0"
+version = "0.6.5"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -1479,9 +1746,9 @@ version = "1.8.0"
 
 [[deps.StatsBase]]
 deps = ["AliasTables", "DataAPI", "DataStructures", "IrrationalConstants", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "aceda6f4e598d331548e04cc6b2124a6148138e3"
+git-tree-sha1 = "c6f18e5a52a176a383f6f6c635e0f81feed1d6d4"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.34.10"
+version = "0.34.11"
 
 [[deps.StatsFuns]]
 deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
@@ -1631,6 +1898,12 @@ version = "1.28.0"
     Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
     NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
     Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[deps.WeakRefStrings]]
+deps = ["DataAPI", "InlineStrings", "Parsers"]
+git-tree-sha1 = "0716e01c3b40413de5dedbc9c5c69f27cddfddfc"
+uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
+version = "1.4.3"
 
 [[deps.WebP]]
 deps = ["CEnum", "ColorTypes", "FileIO", "FixedPointNumbers", "ImageCore", "libwebp_jll"]
@@ -1804,21 +2077,67 @@ version = "4.1.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─8ea98460-545a-11f1-8779-0520d0391738
 # ╠═c75d54c3-bd41-4a9c-9c6f-4a40ec403b62
-# ╟─37a1cc94-6061-4e38-a63f-e9ae26aab040
+# ╠═b775c8a9-ced0-4270-8805-5d43a91e78ea
 # ╠═41ce4fd0-f7f0-43f7-8ae8-220ef71f7830
-# ╟─0c116306-206f-4350-abdf-313ae6c39aaa
 # ╠═3f809858-3cc1-419e-9b40-98ff5e736be6
-# ╟─b879011f-c211-4ad6-943e-d910b0e4384b
 # ╠═2eef38b4-0815-4605-a2e4-46042e93ac8d
-# ╟─8252f786-8bbf-4478-a5bc-53a7aef5e31e
 # ╠═4bea0764-8af6-4cb5-9968-222929a3a26b
-# ╟─a265c359-974b-4f05-b11d-13492bda8759
 # ╠═ba1d76bd-38ed-4fd4-8f20-d8e00ad25352
-# ╟─2f52e8dd-c967-4058-9402-8106a98d4e94
 # ╠═88dcb2af-fd17-4496-a2a6-040ec88b883f
-# ╟─4b297826-20c7-4626-b7cc-29f21da79912
 # ╠═c173e809-1699-486b-9b4e-a739f69d8b03
+# ╠═9b4d39e6-84b1-4b9d-82df-ff39a119c9af
+# ╠═b411aca7-9efb-487f-aeb8-802c29d7bb79
+# ╠═9b1597dc-2a56-424b-be15-7a628c367dfb
+# ╠═e28705ec-a2f6-49cc-baa4-94ea9fd68da7
+# ╠═32a6dbfc-35f4-4157-a3b8-da6456768dc0
+# ╠═ac331353-73cb-4260-a238-89f379ed4619
+# ╠═3b9ed099-adb0-49ea-9281-224739359f73
+# ╠═13c5c0e1-a77e-48e8-896f-9aa8eba7be95
+# ╠═297f8c3c-1e1b-4fe4-821f-a420056baaf6
+# ╠═87908434-d377-48f6-ad61-58dbe3026e64
+# ╠═5446b981-b1e0-4dae-bab8-0dca1f656e28
+# ╠═b5eec029-20d8-4683-810e-738fc1c5ae81
+# ╠═d9d8bc3c-d1fb-48ba-b9e6-c997a4dd0dee
+# ╠═0f84bc0b-8019-404e-81b7-e680bc228446
+# ╠═2edbfdf9-1945-49e9-aee8-b0343115f06e
+# ╠═07bc2a40-2be9-48cb-b777-3a824739e789
+# ╠═6dac29f1-559f-4dd5-82bb-3922a1e06049
+# ╠═0190a091-941e-4182-84b4-d7138fd324ed
+# ╠═47770f73-c091-416b-a0d8-5270d4d51de8
+# ╠═7b3e4825-1373-44ef-a961-8039644eff39
+# ╠═e4896132-6415-4815-bbc4-f7810d3f8462
+# ╠═4572ca48-1b5a-4e02-87c2-9d10597c0934
+# ╠═df58a5d3-f997-4497-a319-384dbbcf69b8
+# ╠═c2e83dee-a29a-49d5-9c15-367dc87f42ba
+# ╠═25fcdb2f-1651-40ef-8cc3-0361a4ca2226
+# ╠═d293b092-12ea-463a-94d7-f3ac7e67738f
+# ╠═f57a4f7f-3c7e-424a-9426-dab2296d0472
+# ╠═3f551764-6c67-4195-b887-f6600704ab5a
+# ╠═75a7e1ee-b25f-404d-83da-1c321e4bcaa8
+# ╠═19ceed58-2da8-466d-9d3f-bda02bde09dc
+# ╠═0ce697ca-7f55-41ed-8249-ff75f6803ac4
+# ╠═14eed81a-bf9d-4f41-9540-be6fbeaa37c2
+# ╟─b05537f1-4593-44dd-99a5-9e2aabd41564
+# ╠═b017f0a4-7ab1-46c0-93ab-de9750b36aef
+# ╠═04db1105-31f3-4b61-af48-171aef331cd7
+# ╟─624197f6-3912-4a53-b13e-40b419fe0217
+# ╟─2caaf452-6723-424c-9ac6-de7c95d9737f
+# ╠═d3b2d1fa-e16d-4fc6-b5de-ebc69946abdd
+# ╟─ca9a13c1-7609-4330-9f4a-5f6637a4906b
+# ╠═ff198b68-de89-4bb1-98b2-fee8844a3680
+# ╠═714b0f52-15d4-4aea-a68e-e162edb43b20
+# ╟─3f7d3639-c49d-4875-acb3-cae8a5e05e48
+# ╠═6f87dc3d-1c6f-456b-947b-198ee98aaf22
+# ╟─4a2beec4-ada0-4aa7-873a-d4d6270b182e
+# ╠═93ca1e74-9d45-42e2-8122-5ffe97d95fbf
+# ╠═1957a92f-7754-4e32-9a9c-cbe7a53b1b8e
+# ╟─cc7e4f8c-d6ef-46cb-b3d2-73297987ed7e
+# ╠═fdb03606-e9b9-4886-82cf-e7f7233f83ef
+# ╠═61876090-1bbc-4500-942b-04c3200e1012
+# ╟─75178594-c446-410c-a631-059c364e451b
+# ╠═e5bd6eea-a8b7-45c4-942b-867b0f8e4033
+# ╟─5016247a-b43a-4715-a729-f70b988e192a
+# ╠═8ea03995-20a0-4fb7-a190-5c4fa76e840e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
