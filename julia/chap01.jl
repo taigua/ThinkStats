@@ -151,8 +151,30 @@ end
 # ╔═╡ 6e33233f-36ff-48ab-bd5c-729e5da36d1b
 preg_subset.outcome
 
+# ╔═╡ 16a3fe72-2abb-415e-a8a5-5c9781f1f90e
+md"""
+## Exercises
+
+The exercises for this chapter are based on the NSFG pregnancy file.
+"""
+
+# ╔═╡ 6ca3a815-baf6-4853-902b-da8ccb6a19d9
+md"""
+### Exercise 1.1
+
+Select the `birthord` column from `preg`, print the value counts, and compare to results published in the  codebook at <https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/NSFG/Cycle6Codebook-Pregnancy.pdf>.
+"""
+
 # ╔═╡ 6a21a338-989e-444a-90d2-56c8cc524e98
 value_counts(preg, :birthord)
+
+# ╔═╡ 05ec2ed8-9912-49c5-ad91-b0f73f8ad1a4
+md"""
+### Exercise 1.2
+
+Create a new column named `totalwgt_kg` that contains birth weight in kilograms (there are approximately 2.2 pounds per kilogram).
+Compute the mean and standard deviation of the new column.
+"""
 
 # ╔═╡ 2bc7d22d-b5f4-4059-9686-65c216129dba
 begin
@@ -160,11 +182,24 @@ begin
 	mean(skipmissing(preg.totalwgt_kg)), std(skipmissing(preg.totalwgt_kg))
 end
 
+# ╔═╡ 9ac73c81-37b2-4f54-9f5d-8bce24c9c52a
+md"""
+### Exercise 1.3
+
+What are the pregnancy lengths for the respondent with `caseid` 2298?
+"""
+
 # ╔═╡ 76bb2ce1-230d-4c4e-ad76-d721f3751c6f
 begin
 	caseid_subset = subset(preg, :caseid => ByRow(==(2298)))
 	caseid_subset.prglngth
 end
+
+# ╔═╡ a5e843db-1109-487a-9ba1-aeb787963d27
+md"""
+What was the birth weight of the first baby born to the respondent with `caseid` 5013?
+Hint: You can use `and` to check more than one condition in a query.
+"""
 
 # ╔═╡ d8b78d8d-bcf9-4617-baa7-61804c74d20d
 begin
@@ -650,9 +685,14 @@ version = "5.15.0+0"
 # ╠═90bbda04-e00c-4bc2-a7fa-34e9efedb13a
 # ╠═44a55052-8605-4c8c-87f3-4afa104d2599
 # ╠═6e33233f-36ff-48ab-bd5c-729e5da36d1b
+# ╟─16a3fe72-2abb-415e-a8a5-5c9781f1f90e
+# ╟─6ca3a815-baf6-4853-902b-da8ccb6a19d9
 # ╠═6a21a338-989e-444a-90d2-56c8cc524e98
+# ╟─05ec2ed8-9912-49c5-ad91-b0f73f8ad1a4
 # ╠═2bc7d22d-b5f4-4059-9686-65c216129dba
+# ╟─9ac73c81-37b2-4f54-9f5d-8bce24c9c52a
 # ╠═76bb2ce1-230d-4c4e-ad76-d721f3751c6f
+# ╟─a5e843db-1109-487a-9ba1-aeb787963d27
 # ╠═d8b78d8d-bcf9-4617-baa7-61804c74d20d
 # ╠═fa97a213-7f28-4664-9249-b745f4bc8496
 # ╟─00000000-0000-0000-0000-000000000001
