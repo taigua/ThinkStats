@@ -35,3 +35,4 @@ R version: 4.6
 Using plain R files with [RStudio](https://posit.co/products/open-source/rstudio) and the following packages:
 
 - [tidyverse](https://tidyverse.org/): R packages for data science.
+- [arrow](https://arrow.apache.org/): The universal columnar format and multi-language toolbox for fast data interchange and in-memory analytics.
